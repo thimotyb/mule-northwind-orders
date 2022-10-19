@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns:db="http://www.mulesoft.org/schema/mule/db"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:new-api="http://www.mulesoft.org/schema/mule/new-api" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/new-api http://www.mulesoft.org/schema/mule/new-api/current/mule-new-api.xsd">
 	<flow name="createOrderTables" doc:id="f9d5c41b-47fa-476c-af8a-25cfb490ebb3" >
 		<scheduler doc:name="Copy_of_Scheduler" doc:id="7ee31883-30c1-4751-a93c-47f2644d89b3" >
 			<scheduling-strategy >
@@ -62,12 +63,21 @@ payload map ( payload01 , indexOfPayload01 ) -> {
 		</ee:transform>
 	</flow>
 	<flow name="postOrder" doc:id="631542aa-86f0-4acd-8db3-99396a74d773" >
-		<db:insert doc:name="Insert Order" doc:id="eb981f3d-649a-4baf-be18-54b6a604e03a" config-ref="NorthWind_Derby_Database" >
-			<db:sql ><![CDATA[INSERT INTO 
+		<http:request method="GET" doc:name="Get A Customer" doc:id="d88ab639-54eb-4e52-9066-afbb64326256" config-ref="HTTP_Request_configuration_Customer_Sapi" path="/customers/{ID}" responseTimeout="600000" target="customer">
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"ID" : payload.CustomerID
+}]]]></http:uri-params>
+		</http:request>
+		<choice doc:name="Choice" doc:id="b5a38e8e-14a3-4f8e-8030-6c80b4d66736" >
+			<when expression="#[not isEmpty(vars.customer)]">
+				<db:insert doc:name="Insert Order" doc:id="eb981f3d-649a-4baf-be18-54b6a604e03a" config-ref="NorthWind_Derby_Database">
+			<db:sql><![CDATA[INSERT INTO 
 Orders (Id,CustomerID,EmployeeID,OrderDate,RequiredDate,ShippedDate,Via,Freight,Name,Address,PostalCode,City,Region,Country) 
 VALUES (:id,:cid,:eid,:odate,:rdate,:sdate,:via,:fr,:name,:add,:post,:city,:reg,:cntry)
 ]]></db:sql>
-			<db:input-parameters ><![CDATA[#[%dw 2.0
+			<db:input-parameters><![CDATA[#[%dw 2.0
 import * from dw::core::Strings
 ---
 { "id": payload.OrderID,
@@ -86,9 +96,9 @@ import * from dw::core::Strings
 	"cntry": payload.ShipCountry
 }]]]></db:input-parameters>
 		</db:insert>
-		<ee:transform doc:name="Copy_of_Transform Message" doc:id="4503c343-c13c-4f36-9964-c6355836fc43" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+				<ee:transform doc:name="Copy_of_Transform Message" doc:id="4503c343-c13c-4f36-9964-c6355836fc43">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -96,5 +106,19 @@ output application/json
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="374fec3d-cb00-443e-a2c3-c46668b0e661" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "The Customer ID could not be found."
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
 	</flow>
 </mule>
