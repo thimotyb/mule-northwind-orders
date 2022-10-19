@@ -118,7 +118,23 @@ output application/json
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
+				<set-variable value="404" doc:name="404 Not Found" doc:id="59ca7be4-14b2-41be-9037-e63dc1cfcb0e" variableName="httpStatus"/>
 			</otherwise>
 		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="bf39b463-dbe7-421f-9e33-bd72c8c81fb3" type="DB:BAD_SQL_SYNTAX, DB:QUERY_EXECUTION">
+				<ee:transform doc:name="Transform Message" doc:id="3991be5d-effc-4608-b0f1-c4d0793fef85" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Could not insert record: " ++ (error.description default "")
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="409" doc:name="409 Conflict" doc:id="fe7611cd-b9ad-42c3-8bcb-d6ccd1958732" variableName="httpStatus"/>
+			</on-error-propagate>
+		</error-handler>
 	</flow>
 </mule>
