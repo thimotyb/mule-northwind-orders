@@ -17,9 +17,9 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
    Id INT NOT NULL,
    CustomerID VARCHAR(255) NOT NULL,
    EmployeeID VARCHAR(255) NOT NULL,
-   OrderDate TIMESTAMP NOT NULL,
-   RequiredDate TIMESTAMP,
-   ShippedDate TIMESTAMP,
+   OrderDate DATE NOT NULL,
+   RequiredDate DATE,
+   ShippedDate DATE,
    Via INT,
    Freight DECIMAL,
    Name VARCHAR(255),
@@ -67,12 +67,15 @@ payload map ( payload01 , indexOfPayload01 ) -> {
 Orders (Id,CustomerID,EmployeeID,OrderDate,RequiredDate,ShippedDate,Via,Freight,Name,Address,PostalCode,City,Region,Country) 
 VALUES (:id,:cid,:eid,:odate,:rdate,:sdate,:via,:fr,:name,:add,:post,:city,:reg,:cntry)
 ]]></db:sql>
-			<db:input-parameters ><![CDATA[#[{ "id": payload.OrderID,
+			<db:input-parameters ><![CDATA[#[%dw 2.0
+import * from dw::core::Strings
+---
+{ "id": payload.OrderID,
 	"cid": payload.CustomerID,
 	"eid": payload.EmployeeID,
-	"odate": "1960-01-01 23:03:20",
-	"rdate": "2022-10-19 23:03:20",
-	"sdate": "2022-10-19 23:03:20",
+	"odate": substring(payload.OrderDate, 0, 10),
+	"rdate": substring(payload.RequiredDate, 0, 10),
+	"sdate": substring(payload.ShippedDate, 0, 10), 
 	"via": payload.Via,
 	"fr": payload.Freight,
 	"name": payload.ShipName,
